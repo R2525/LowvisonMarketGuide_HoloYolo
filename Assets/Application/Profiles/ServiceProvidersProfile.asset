@@ -20,6 +20,6 @@ MonoBehaviour:
     profile: {fileID: 11400000, guid: f6b28218eb587ae488a3036c073aad39, type: 2}
     platformEntries:
       runtimePlatforms:
-      - reference: 16a3125f-31d5-4ec6-a120-8be889a74d27
+      - reference: 9869b29e-43bb-44cc-ae49-eb5c913263f9
   initializeOnPlay: 0
   doNotDestroyServiceManagerOnLoad: 1

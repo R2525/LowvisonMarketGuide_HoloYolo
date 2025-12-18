@@ -1182,9 +1182,20 @@ namespace YoloHolo.YoloLabeling
         private void Start()
         {
             yoloProcessor = ServiceManager.Instance.GetService<IYoloProcessor>();
+            if (yoloProcessor == null)
+            {
+                Debug.LogError("Failed to get IYoloProcessor service. Aborting YoloObjectLabeler start.");
+                return;
+            }
+
             webCamTexture = new WebCamTexture(requestedCameraSize.x, requestedCameraSize.y, cameraFPS);
             webCamTexture.Play();
-            StartRecognizingAsync();
+            
+            // Check if webcam started playing (might take a frame, but Play() is usually async start)
+            // Ideally we check isPlaying in coroutine, but at least don't crash if texture is invalid?
+            // Existing logic says 'Couldn't config the stream!', likely internal Unity error.
+            
+            _ = StartRecognizingAsync();
         }
         public GameObject FindTrackedObjectByClassName(string className)
         {
@@ -1242,10 +1253,15 @@ namespace YoloHolo.YoloLabeling
                 if (newObj.PositionInSpace.Value.y > (startingCameraY + maxRelativeHeight)) continue;
 
                 // 모든 필터를 통과하면 객체 생성
+                
                 yoloObjectCounter++;
                 yoloGameObjects.Add(newObj);
                 newObj.DisplayObject = Instantiate(labelObject, newObj.PositionInSpace.Value, Quaternion.identity);
                 newObj.DisplayObject.name = newObj.Name;
+                
+                // [Candidates] Tag as "TargetObject" so MainController sends them to Python
+                newObj.DisplayObject.tag = "TargetObject";
+                
                 newObj.DisplayObject.transform.parent = transform;
                 newObj.DisplayObject.GetComponent<ObjectLabelController>().SetText(newObj.Name);
             }

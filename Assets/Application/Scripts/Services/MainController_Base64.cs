@@ -182,6 +182,7 @@ public class MainController_Base64 : MonoBehaviour
 
         // ▼▼▼ 순서 변경 ▼▼▼
         // 1. 3D -> 2D 좌표 변환을 먼저 수행
+        // 1. 3D -> 2D 좌표 변환을 먼저 수행
         List<YoloObjectInfo> foundObjects = objectTracker.FindAndProjectObjects("TargetObject");
 
         // 2. 좌표 변환 직후, 시간차를 최소화하여 이미지 캡처
@@ -430,6 +431,9 @@ public class MainController_Base64 : MonoBehaviour
                 // 4. 기본 큐브 대신 연결된 프리팹을 생성(Instantiate)합니다.
                 GameObject newHighlight = Instantiate(highlightPrefab);
                 newHighlight.name = $"Highlight_{_highlightCubeCounter++}";
+                
+                // [User Request] Ensure this highlight is the tracking target for Logger
+                newHighlight.tag = "FoundObject";
 
                 // 5. 프리팹의 위치와 크기를 설정합니다.
                 newHighlight.transform.localScale = new Vector3(0.15f, 0.15f, 0.15f); // 필요에 따라 조절
