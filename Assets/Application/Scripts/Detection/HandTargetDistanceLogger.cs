@@ -111,9 +111,11 @@ public class HandTargetDistanceLogger : MonoBehaviour
         originPos.y -= 0.1f; // Lower Head origin by 10cm (User Request)
         
         InitializeRightHand();
+        string trackingSource = "head";
         if (IsHandTracked(out Vector3 handPos))
         {
             originPos = handPos; // Use Hand if valid (Overrides Head)
+            trackingSource = "hand";
         }
 
         // Calculate direction relative to Camera (User's View)
@@ -125,7 +127,9 @@ public class HandTargetDistanceLogger : MonoBehaviour
         
         // Send Data (Guidance Strings)
         // Flutter expects: "direction(value)" e.g. "left(0.5)"
-        SendGuidanceStrings(camTransform, worldDir);
+        // Send Data (Guidance Strings)
+        // Flutter expects: "direction(value)" e.g. "left(0.5)"
+        SendGuidanceStrings(camTransform, worldDir, trackingSource);
 
         // --- 2. Grab Logic (Hand based) ---
         CheckGrabCondition(targetPos);
@@ -283,7 +287,7 @@ public class HandTargetDistanceLogger : MonoBehaviour
         }
     }
 
-    private void SendGuidanceStrings(Transform relativeTo, Vector3 worldDir)
+    private void SendGuidanceStrings(Transform relativeTo, Vector3 worldDir, string source)
     {
         // Project world direction into Camera's local space
         Vector3 localDir = relativeTo.InverseTransformDirection(worldDir);
@@ -297,6 +301,7 @@ public class HandTargetDistanceLogger : MonoBehaviour
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
         sb.Append("{");
         sb.Append($"\"type\":\"guidance\",");
+        sb.Append($"\"source\":\"{source}\",");
         sb.Append($"\"timestamp\":{System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()},");
 
         // Horizontal
@@ -380,9 +385,13 @@ public class HandTargetDistanceLogger : MonoBehaviour
     {
         if (rightHandDevice.isValid) return;
         var devices = new List<InputDevice>();
-        InputDevices.GetDevicesWithCharacteristics(InputDeviceCharacteristics.Right | InputDeviceCharacteristics.HandTracking | InputDeviceCharacteristics.HeldInHand, devices);
+        InputDevices.GetDevicesWithCharacteristics(InputDeviceCharacteristics.Right | InputDeviceCharacteristics.HandTracking, devices);
         if (devices.Count == 0) InputDevices.GetDevicesWithCharacteristics(InputDeviceCharacteristics.Right | InputDeviceCharacteristics.Controller, devices);
-        if (devices.Count > 0) rightHandDevice = devices[0];
+        if (devices.Count > 0) 
+        {
+            rightHandDevice = devices[0];
+            Debug.Log($"[Logger] Hand Device Found: {rightHandDevice.name}");
+        }
     }
 
     private bool IsHandTracked(out Vector3 position)

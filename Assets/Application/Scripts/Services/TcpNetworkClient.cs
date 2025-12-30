@@ -94,15 +94,39 @@ public class TcpNetworkClient : MonoBehaviour
     {
         isConnected = false;
         _isSenderRunning = false;
-        _isConnecting = false; // Reset connecting state
+        _isConnecting = false;
+
+        Debug.Log("[TCP] Disconnecting...");
 
 #if !UNITY_EDITOR && UNITY_WSA
-        if (_writer != null) { _writer.DetachStream(); _writer.Dispose(); _writer = null; }
-        if (_socket != null) { _socket.Dispose(); _socket = null; }
+        try
+        {
+            lock (_uwpLock)
+            {
+                if (_writer != null) { _writer.DetachStream(); _writer.Dispose(); _writer = null; }
+                if (_socket != null) { _socket.Dispose(); _socket = null; }
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[TCP] Error during UWP disconnect: {e.Message}");
+        }
 #else
-        if (_clientThread != null && _clientThread.IsAlive) _clientThread.Abort(); // Force stop
-        if (_stream != null) { _stream.Close(); _stream = null; }
-        if (_client != null) { _client.Close(); _client = null; }
+        try 
+        {
+            if (_clientThread != null && _clientThread.IsAlive) _clientThread.Abort(); 
+        } 
+        catch {} // Ignore thread abort errors
+        
+        try
+        {
+            if (_stream != null) { _stream.Close(); _stream = null; }
+            if (_client != null) { _client.Close(); _client = null; }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[TCP] Error during Editor disconnect: {e.Message}");
+        }
 #endif
         Debug.Log("[TCP] Disconnected");
     }
@@ -173,6 +197,8 @@ public class TcpNetworkClient : MonoBehaviour
 
     #region UWP Implementation
 #if !UNITY_EDITOR && UNITY_WSA
+    private object _uwpLock = new object();
+
     private async void ConnectUWP()
     {
         try
@@ -181,10 +207,14 @@ public class TcpNetworkClient : MonoBehaviour
             var host = new Windows.Networking.HostName(serverIp);
             await _socket.ConnectAsync(host, serverPort.ToString());
 
-            _writer = new DataWriter(_socket.OutputStream);
+            lock (_uwpLock)
+            {
+                _writer = new DataWriter(_socket.OutputStream);
+            }
+            
             isConnected = true;
             _isSenderRunning = true;
-            _isConnecting = false; // Finished connecting
+            _isConnecting = false;
 
             Debug.Log("[TCP] Connected (UWP)");
 
@@ -196,7 +226,7 @@ public class TcpNetworkClient : MonoBehaviour
             lastError = e.Message;
             Debug.LogError($"[TCP] UWP Error: {e.Message}");
             isConnected = false;
-            _isConnecting = false; // Reset connecting state on failure
+            _isConnecting = false;
         }
     }
 
@@ -206,16 +236,40 @@ public class TcpNetworkClient : MonoBehaviour
         {
             if (_sendQueue.TryDequeue(out string msg))
             {
+                // We need to be careful not to hold the lock during the async await if possible, 
+                // but DataWriter methods are async.
+                // However, we MUST NOT dispose while writing.
+                
+                // Strategy: Check existence under lock, then perform operation? 
+                // No, Dispose removes the underlying stream. 
+                // We can catch the ObjectDisposedException, but a raw crash (Access Violation) 
+                // implies race at native level.
+                
+                // Better strategy: Simple flag + try-catch inside the loop might not be enough.
+                // Let's use flexible locking or just check nulls aggressively.
+                // AND IMPORTANTLY: Debug.Log on background thread in UWP can sometimes crash Unity. 
+                // Let's remove Debug.Log from the tight loop or minimize it.
+                
                 try
                 {
-                    _writer.WriteString(msg);
-                    await _writer.StoreAsync(); // Send immediately
-                    await _writer.FlushAsync();
+                    // Accessing _writer must be safe
+                    DataWriter localWriter = null;
+                    lock(_uwpLock)
+                    {
+                        localWriter = _writer;
+                    }
+
+                    if (localWriter != null)
+                    {
+                        localWriter.WriteString(msg);
+                        await localWriter.StoreAsync(); 
+                        await localWriter.FlushAsync();
+                    }
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError($"[TCP] Send Error: {e.Message}");
-                    Disconnect(); // Disconnect on write failure
+                    // Debug.LogError($"[TCP] Send Error: {e.Message}"); // Risky on background thread?
+                    Disconnect(); 
                     break;
                 }
             }

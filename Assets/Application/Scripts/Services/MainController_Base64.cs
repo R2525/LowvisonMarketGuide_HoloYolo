@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using YoloHolo.YoloLabeling;
 using YoloHolo.Utilities;
 using System.Collections.Concurrent; 
+using System.Threading.Tasks;
 
 #if ENABLE_WINMD_SUPPORT && WINDOWS_UWP
 using Windows.Networking.Sockets;
@@ -481,11 +482,7 @@ public class MainController_Base64 : MonoBehaviour
 #if ENABLE_WINMD_SUPPORT && WINDOWS_UWP
     private async void ConnectWebSocket()
     {
-#if !ENABLE_WINMD_SUPPORT || !WINDOWS_UWP
-        Debug.Log("[MainController] WebSocket은 UWP 빌드에서만 동작합니다.");
-        return; // Use return instead of yield break
-#else
-        Debug.Log($"[WebSocket] 서버에 연결 시도 중... {commandWsUrl}");
+        if (messageWebSocket != null) messageWebSocket.Dispose();
         messageWebSocket = new MessageWebSocket();
         messageWebSocket.Control.MessageType = SocketMessageType.Utf8;
         messageWebSocket.MessageReceived += OnWebSocketMessage;
@@ -493,19 +490,19 @@ public class MainController_Base64 : MonoBehaviour
 
         try
         {
-            // Now 'await' is valid in an async method
             await messageWebSocket.ConnectAsync(new Uri(commandWsUrl));
-            Debug.Log("[WebSocket] 성공적으로 연결되었습니다.");
+            // Debug.Log("[WebSocket] 성공적으로 연결되었습니다.");
         }
         catch (Exception ex)
         {
-            Debug.LogError($"[WebSocket] 연결 실패: {ex.Message}");
+            // Debug.LogError($"[WebSocket] 연결 실패: {ex.Message}");
             messageWebSocket.Dispose();
             messageWebSocket = null;
+            await Task.Delay(2000);
+            ConnectWebSocket();
         }
-        // No longer need 'yield return null'
-#endif
     }
+
     private void OnWebSocketMessage(MessageWebSocket sender, MessageWebSocketMessageReceivedEventArgs args)
     {
         try
@@ -514,35 +511,43 @@ public class MainController_Base64 : MonoBehaviour
             {
                 dataReader.UnicodeEncoding = Windows.Storage.Streams.UnicodeEncoding.Utf8;
                 string message = dataReader.ReadString(dataReader.UnconsumedBufferLength);
-                Debug.Log($"[WebSocket] 메시지 수신: {message}");
-
-                // Corrected: Use the existing ConcurrentQueue to pass the message to the main thread.
-                // The Update() method will handle processing it.
                 wsMessages.Enqueue(message);
             }
         }
         catch (Exception ex)
         {
-            Debug.LogError($"[WebSocket] 메시지 처리 오류: {ex.Message}");
+            // Debug.LogError($"[WebSocket] 메시지 처리 오류: {ex.Message}");
         }
     }
+
+    private void OnWebSocketClosed(IWebSocket sender, WebSocketClosedEventArgs args)
+    {
+        messageWebSocket?.Dispose();
+        messageWebSocket = null;
+        ConnectWebSocket(); 
+    }
+#else
+    // Dummy implementation/stub for Editor to prevent compile errors if called unconditionally
+    private void ConnectWebSocket() 
+    {
+        Debug.Log("[MainController] WebSocket is UWP-only. Running in Mock/UDP mode.");
+    }
+#endif
+
     private void ProcessWebSocketMessage(string message)
     {
         try
         {
             WebSocketMessage wsMessage = JsonConvert.DeserializeObject<WebSocketMessage>(message);
 
-            // "search_started" 타입일 경우 target을 설정
             if (wsMessage.type == "search_started")
             {
                 Debug.Log($"[WebSocket] 새로운 검색 타겟 수신: {wsMessage.target}");
                 _currentSearchTarget = wsMessage.target;
-                ClearHighlight(); // 새로운 타겟을 찾기 전에 이전 하이라이트 제거
+                ClearHighlight();
             }
-            // "state_changed" 타입이고, 새 상태가 "active"일 경우 target을 설정
             else if (wsMessage.type == "state_changed" && wsMessage.new_state == "active")
             {
-                // 서버가 target을 보내주는 경우에만 값을 가져옴
                 if (!string.IsNullOrEmpty(wsMessage.target))
                 {
                     Debug.Log($"[WebSocket] 상태 변경으로 검색 타겟 활성화: {wsMessage.target}");
@@ -550,7 +555,6 @@ public class MainController_Base64 : MonoBehaviour
                     ClearHighlight();
                 }
             }
-            // 검색이 중지되는 조건
             else if (wsMessage.type == "search_paused" || (wsMessage.type == "state_changed" && wsMessage.new_state != "active"))
             {
                 Debug.Log("[WebSocket] 검색이 중지되었습니다.");
@@ -563,15 +567,6 @@ public class MainController_Base64 : MonoBehaviour
             Debug.LogError($"[WebSocket] JSON 파싱 오류: {e.Message}");
         }
     }
-    private void OnWebSocketClosed(IWebSocket sender, WebSocketClosedEventArgs args)
-    {
-        Debug.LogWarning($"[WebSocket] 연결이 끊어졌습니다. Code: {args.Code}, Reason: {args.Reason}");
-        messageWebSocket?.Dispose();
-        messageWebSocket = null;
-        // 필요하다면 여기서 재연결 로직을 시작할 수 있습니다.
-        // StartCoroutine(ConnectWebSocket());
-    }
-#endif
 
     private byte[] EncodeResizedToJPG(Texture src, int w, int h, int quality)
     {
