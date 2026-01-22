@@ -312,7 +312,7 @@ MonoBehaviour:
   alwaysSend: 1
   resizedWidth: 896
   resizedHeight: 504
-  jpgQuality: 73
+  jpgQuality: 100
 --- !u!4 &596106529
 Transform:
   m_ObjectHideFlags: 0

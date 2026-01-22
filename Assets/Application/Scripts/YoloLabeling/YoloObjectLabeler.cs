@@ -1151,7 +1151,7 @@ namespace YoloHolo.YoloLabeling
         [Header("Label Settings")]
         [SerializeField] private GameObject labelObject;
         [Tooltip("이 거리(미터) 안에 같은 종류의 라벨이 이미 있으면 새로 생성하지 않습니다.")]
-        [SerializeField] private float minIdenticalLabelDistance = 0.3f;
+        [SerializeField] private float minIdenticalLabelDistance = 0.2f;
         [Tooltip("라벨이 보이지 않을 때 사라지기까지의 시간(초)")]
         [SerializeField] private float labelNotSeenTimeOut = 5f;
 
