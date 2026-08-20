@@ -1,0 +1,4 @@
+# Python server secrets (main.py reads these via os.environ)
+.env
+__pycache__/
+*.pyc
