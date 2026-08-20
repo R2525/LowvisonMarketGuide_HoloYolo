@@ -75,15 +75,15 @@ latest_annotated_jpeg: Optional[bytes] = None
 
 # 配置常量
 CONFIG = {
-    'NAVER_OCR_URL': os.environ.get('NAVER_OCR_URL', '***REMOVED***'),
-    'NAVER_SECRET_KEY': os.environ.get('NAVER_SECRET_KEY', '***REMOVED***'),
+    'NAVER_OCR_URL': os.environ.get('NAVER_OCR_URL', ''),
+    'NAVER_SECRET_KEY': os.environ.get('NAVER_SECRET_KEY', ''),
     'DETECTION_COOLDOWN': float(os.environ.get('DETECTION_COOLDOWN', '0')),
     'OCR_MIN_CONFIDENCE': float(os.environ.get('OCR_MIN_CONFIDENCE', '0.7')),
     'STREAM_URL': os.environ.get('STREAM_URL', "rtsp://192.168.0.28:8554/live"),
     'RECONNECT_DELAY': int(os.environ.get('RECONNECT_DELAY', '3')),
     'STREAM_TIMEOUT': int(os.environ.get('STREAM_TIMEOUT', '20')),
     'OPENAI_STT_MODEL': os.environ.get('OPENAI_STT_MODEL', 'whisper-1'),
-    'OPENAI_API_KEY': os.environ.get('OPENAI_API_KEY', '***REMOVED***'),
+    'OPENAI_API_KEY': os.environ.get('OPENAI_API_KEY', ''),
     'AUDIO_SAMPLE_RATE': 16000,
     'AUDIO_CHUNK_SIZE': 1024,
     'VOICE_ACTIVATION_THRESHOLD': 500,

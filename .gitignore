@@ -1,3 +1,8 @@
+# Python server secrets (main.py reads these via os.environ)
+.env
+__pycache__/
+*.pyc
+
 # This .gitignore file should be placed at the root of your Unity project directory
 #
 # Get latest from https://github.com/github/gitignore/blob/main/Unity.gitignore
