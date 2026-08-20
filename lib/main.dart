@@ -16,6 +16,9 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:web_socket_channel/io.dart'; // 移动端 WebSocket
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+/// Injected at build time: flutter run --dart-define=OPENAI_API_KEY=sk-...
+const String _openAiApiKey = String.fromEnvironment('OPENAI_API_KEY');
+
 /// Main entry point of the application.
 void main() {
   runApp(const VoiceApp());
@@ -1408,8 +1411,7 @@ class _VoiceAppState extends State<VoiceApp> {
         data: formData,
         options: Options(
           headers: {
-            'Authorization':
-                'Bearer ***REMOVED***',
+            'Authorization': 'Bearer $_openAiApiKey',
           },
         ),
       );

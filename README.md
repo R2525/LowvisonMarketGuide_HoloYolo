@@ -2,6 +2,15 @@
 
 A new Flutter project.
 
+## Running
+
+The app calls the OpenAI Whisper API directly and needs a key injected at build/run time
+(it is intentionally not hardcoded in the source):
+
+```
+flutter run --dart-define=OPENAI_API_KEY=sk-...
+```
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
