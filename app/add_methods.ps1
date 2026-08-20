@@ -1,0 +1,98 @@
+$filePath = "d:\Low Vision\voice_app\voice_app_new\lib\main.dart"
+$content = Get-Content $filePath -Raw -Encoding UTF8
+
+$methodsToAdd = @'
+
+  /// 当用户触摸屏幕时，启动语音输入
+  Future<void> _promptForInput() async {
+    setState(() {
+      _state = AppState.listening;
+    });
+
+    await _tts.speak('무엇을 찾고 계신가요?'); // "What are you looking for?"
+    
+    try {
+      // 开始录音
+      final tempDir = await getTemporaryDirectory();
+      _currentRecordingPath = '${tempDir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      
+      if (await _record.hasPermission()) {
+        await _record.start(
+          const RecordConfig(encoder: AudioEncoder.aacLc),
+          path: _currentRecordingPath,
+        );
+
+        // 录音 5 秒后自动停止并发送
+        await Future.delayed(const Duration(seconds: 5));
+        
+        final path = await _record.stop();
+        if (path != null && path.isNotEmpty) {
+          await _uploadAndRecognize(path);
+        } else {
+          // 录音失败，回到 idle
+          setState(() {
+            _state = AppState.idle;
+          });
+          await _tts.speak('녹음 실패. 다시 시도해주세요.'); // "Recording failed, please try again"
+        }
+      } else {
+        // 没有权限
+        setState(() {
+          _state = AppState.idle;
+        });
+        await _tts.speak('마이크 권한이 필요합니다.'); // "Microphone permission required"
+      }
+    } catch (e) {
+      print('录音错误: $e');
+      setState(() {
+        _state = AppState.idle;
+      });
+      await _tts.speak('오류가 발생했습니다. 다시 시도해주세요.'); // "An error occurred, please try again"
+    }
+  }
+
+  /// 上传音频文件并识别
+  Future<void> _uploadAndRecognize(String audioPath) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(audioPath, filename: 'voice.m4a'),
+      });
+
+      final response = await _dio.post(
+        '$_pythonApiBase/recognize',
+        data: formData,
+      );
+
+      if (response.statusCode == 200 && response.data['text'] != null) {
+        String recognizedText = response.data['text'];
+        print('识别结果: $recognizedText');
+        
+        // 发送到后端进行搜索
+        await _sendToBackend(recognizedText);
+      } else {
+        setState(() {
+          _state = AppState.idle;
+        });
+        await _tts.speak('음성 인식 실패. 다시 시도해주세요.'); // "Voice recognition failed"
+      }
+    } catch (e) {
+      print('语音识别错误: $e');
+      setState(() {
+        _state = AppState.idle;
+      });
+      await _tts.speak('오류가 발생했습니다.'); // "An error occurred"
+    }
+  }
+
+'@
+
+# Find the location to insert (before "Future<void> _sendToBackend")
+$searchPattern = '  Future<void> _sendToBackend\(String phrase\) async \{'
+$replacement = $methodsToAdd + "`r`n  Future<void> _sendToBackend(String phrase) async {"
+
+$newContent = $content -replace [regex]::Escape($searchPattern), $replacement
+
+# Save the file
+Set-Content -Path $filePath -Value $newContent -Encoding UTF8 -NoNewline
+
+Write-Host "Methods added successfully!"

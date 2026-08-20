@@ -1,0 +1,33 @@
+name: voice_app_new
+description: A voice-controlled shopping assistant for visually impaired users.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"   # 如果你的 Flutter 较老，先不改这行也行，按现状保留
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  dio: ^5.7.0
+  flutter_tts: ^4.2.3
+  record: 6.1.2
+  permission_handler: ^12.0.1
+  vibration: ^3.1.4
+  path_provider: ^2.1.4
+  http_parser: ^4.0.2
+  audioplayers: ^6.0.0
+
+  # 用 wakelock_plus 替代已弃用的 wakelock
+  wakelock_plus: 1.4.0
+  web_socket_channel: ^3.0.3
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.1
+
+flutter:
+  uses-material-design: true
