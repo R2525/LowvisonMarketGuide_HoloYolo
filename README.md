@@ -11,6 +11,12 @@ The app calls the OpenAI Whisper API directly and needs a key injected at build/
 flutter run --dart-define=OPENAI_API_KEY=sk-...
 ```
 
+## Backend server
+
+The Python backend (`main.py`) lives in the `LowvisonMarketGuide_HoloYolo` repo, not here.
+A stale copy under `python后端/` used to live in this repo and has been removed to avoid
+the two drifting apart again.
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
