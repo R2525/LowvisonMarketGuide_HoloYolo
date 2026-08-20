@@ -7,6 +7,10 @@
 .buildlog/
 .history
 
+# Python backend secrets (python后端/main.py reads these via os.environ)
+.env
+__pycache__/
+
 
 
 # Flutter repo-specific
